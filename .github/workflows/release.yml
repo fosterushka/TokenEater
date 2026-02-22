@@ -52,11 +52,15 @@ jobs:
         id: sha
         run: echo "sha256=$(shasum -a 256 TokenEater.dmg | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
+      - name: Upload to GitHub Release
         run: |
-          gh release create "$GITHUB_REF_NAME" TokenEater.dmg \
-            --title "TokenEater ${{ steps.version.outputs.version }}" \
-            --generate-notes
+          if gh release view "$GITHUB_REF_NAME" &>/dev/null; then
+            gh release upload "$GITHUB_REF_NAME" TokenEater.dmg --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" TokenEater.dmg \
+              --title "TokenEater ${{ steps.version.outputs.version }}" \
+              --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
