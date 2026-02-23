@@ -4,11 +4,12 @@
 
 ### Prérequis
 - Xcode 15+, XcodeGen (`brew install xcodegen`)
-- Le `DEVELOPMENT_TEAM` n'est pas dans `project.yml` — le passer en CLI : `DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM`
+- Le `DEVELOPMENT_TEAM` n'est pas dans `project.yml` — il est détecté automatiquement depuis le certificat Apple local
 
 ### Build
 ```bash
 xcodegen generate
+DEVELOPMENT_TEAM=$(security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject 2>/dev/null | grep -oE 'OU=[A-Z0-9]{10}' | head -1 | cut -d= -f2)
 plutil -insert NSExtension -json '{"NSExtensionPointIdentifier":"com.apple.widgetkit-extension"}' ClaudeUsageWidget/Info.plist 2>/dev/null || true
 xcodebuild -project ClaudeUsageWidget.xcodeproj -scheme ClaudeUsageApp -configuration Release -derivedDataPath build -allowProvisioningUpdates DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM build
 ```
