@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ClaudeUsageApp/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" height="128" alt="TokenEater">
+  <img src="TokenEaterApp/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" height="128" alt="TokenEater">
 </p>
 
 <h1 align="center">TokenEater</h1>
@@ -136,7 +136,8 @@ brew uninstall --cask tokeneater
 This removes the app from `/Applications/`. To also remove all data:
 
 ```bash
-rm -rf ~/Library/Application\ Support/com.claudeusagewidget.shared
+rm -rf ~/Library/Application\ Support/com.tokeneater.shared
+rm -rf ~/Library/Application\ Support/com.claudeusagewidget.shared  # legacy path
 ```
 
 ### Manual
@@ -149,10 +150,11 @@ killall TokenEater 2>/dev/null
 rm -rf /Applications/TokenEater.app
 
 # 3. Remove shared data (token cache, usage data, theme settings)
-rm -rf ~/Library/Application\ Support/com.claudeusagewidget.shared
+rm -rf ~/Library/Application\ Support/com.tokeneater.shared
+rm -rf ~/Library/Application\ Support/com.claudeusagewidget.shared  # legacy path
 
 # 4. Remove preferences
-defaults delete com.claudeusagewidget.app 2>/dev/null
+defaults delete com.tokeneater.app 2>/dev/null
 ```
 
 > **Note:** The OAuth token itself lives in the macOS Keychain (managed by Claude Code). Uninstalling TokenEater does not touch it.
@@ -177,11 +179,11 @@ xcodegen generate
 # ⚠️ XcodeGen strips NSExtension from the widget Info.plist.
 # Re-add it manually or run:
 plutil -insert NSExtension -json '{"NSExtensionPointIdentifier":"com.apple.widgetkit-extension"}' \
-  ClaudeUsageWidget/Info.plist 2>/dev/null || true
+  TokenEaterWidget/Info.plist 2>/dev/null || true
 
 # Build
-xcodebuild -project ClaudeUsageWidget.xcodeproj \
-  -scheme ClaudeUsageApp \
+xcodebuild -project TokenEater.xcodeproj \
+  -scheme TokenEaterApp \
   -configuration Release \
   -derivedDataPath build build
 
@@ -194,9 +196,14 @@ open "/Applications/TokenEater.app"
 ## Architecture
 
 ```
-ClaudeUsageApp/          App host (settings UI, OAuth auth, menu bar)
-ClaudeUsageWidget/       Widget Extension (WidgetKit, 15-min refresh)
-Shared/                  Shared code (API client, models, pacing, notifications)
+TokenEaterApp/           App host (settings UI, OAuth auth, menu bar)
+TokenEaterWidget/        Widget Extension (WidgetKit, 15-min refresh)
+Shared/                  Shared code (services, stores, models, pacing, notifications)
+  ├── Models/            Pure Codable structs
+  ├── Services/          Protocol-based I/O (API, Keychain, SharedFile, Notification)
+  ├── Repositories/      Orchestration (UsageRepository)
+  ├── Stores/            @Observable state containers
+  ├── Helpers/           Pure functions (PacingCalculator, MenuBarRenderer)
   ├── en.lproj/          English strings
   └── fr.lproj/          French strings
 project.yml              XcodeGen configuration
@@ -223,7 +230,7 @@ TokenEater uses a **shared JSON file** to safely pass data between the menu bar 
 ### How it works
 
 1. **Menu bar app** reads the Claude Code OAuth token from the macOS Keychain
-2. The token and API responses are written to a shared file (`~/Library/Application Support/com.claudeusagewidget.shared/shared.json`)
+2. The token and API responses are written to a shared file (`~/Library/Application Support/com.tokeneater.shared/shared.json`)
 3. **Widget** reads cached data from this file — it never touches the Keychain or makes API calls
 
 ### Why this architecture?
@@ -238,7 +245,7 @@ App Groups (`UserDefaults(suiteName:)`) is Apple's recommended mechanism for sha
 
 ### Token storage
 
-The shared data is stored as a JSON file in `~/Library/Application Support/com.claudeusagewidget.shared/`. Both the app and widget access this directory via sandbox temporary-exception entitlements (app: read-write, widget: read-only). This directory is:
+The shared data is stored as a JSON file in `~/Library/Application Support/com.tokeneater.shared/`. Both the app and widget access this directory via sandbox temporary-exception entitlements (app: read-write, widget: read-only). This directory is:
 - **Sandboxed** — the app has read-write access, the widget has read-only access
 - **User-scoped** — stored in the user's Library, not system-wide
 - **Not synced** — not backed up to iCloud or shared across devices
