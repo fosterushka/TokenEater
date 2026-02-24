@@ -5,6 +5,7 @@ struct TokenEaterApp: App {
     @State private var usageStore = UsageStore()
     @State private var themeStore = ThemeStore()
     @State private var settingsStore = SettingsStore()
+    @State private var updateStore = UpdateStore()
 
     init() {
         NotificationService().setupDelegate()
@@ -14,6 +15,13 @@ struct TokenEaterApp: App {
         WindowGroup(id: "settings") {
             if settingsStore.hasCompletedOnboarding {
                 SettingsView()
+                    .sheet(isPresented: Bindable(updateStore).showUpdateModal) {
+                        UpdateModalView()
+                            .environment(updateStore)
+                    }
+                    .task {
+                        updateStore.startAutoCheck()
+                    }
             } else {
                 OnboardingView()
             }
@@ -21,6 +29,7 @@ struct TokenEaterApp: App {
         .environment(usageStore)
         .environment(themeStore)
         .environment(settingsStore)
+        .environment(updateStore)
         .onChange(of: settingsStore.hasCompletedOnboarding) { _, completed in
             if completed {
                 usageStore.proxyConfig = settingsStore.proxyConfig
@@ -36,6 +45,7 @@ struct TokenEaterApp: App {
                 .environment(usageStore)
                 .environment(themeStore)
                 .environment(settingsStore)
+                .environment(updateStore)
         } label: {
             Image(nsImage: menuBarImage)
         }
