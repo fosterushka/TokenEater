@@ -2,10 +2,12 @@ import SwiftUI
 
 @main
 struct TokenEaterApp: App {
-    @State private var usageStore = UsageStore()
-    @State private var themeStore = ThemeStore()
-    @State private var settingsStore = SettingsStore()
-    @State private var updateStore = UpdateStore()
+    private let usageStore = UsageStore()
+    private let themeStore = ThemeStore()
+    private let settingsStore = SettingsStore()
+    private let updateStore = UpdateStore()
+
+    @AppStorage("showMenuBar") private var showMenuBar = true
 
     init() {
         NotificationService().setupDelegate()
@@ -13,58 +15,72 @@ struct TokenEaterApp: App {
 
     var body: some Scene {
         WindowGroup(id: "settings") {
-            if settingsStore.hasCompletedOnboarding {
-                SettingsView()
-                    .sheet(isPresented: Bindable(updateStore).showUpdateModal) {
-                        UpdateModalView()
-                            .environment(updateStore)
-                    }
-                    .task {
-                        updateStore.startAutoCheck()
-                    }
-            } else {
-                OnboardingView()
-            }
+            RootView()
         }
-        .environment(usageStore)
-        .environment(themeStore)
-        .environment(settingsStore)
-        .environment(updateStore)
-        .onChange(of: settingsStore.hasCompletedOnboarding) { _, completed in
-            if completed {
-                Task {
-                    usageStore.proxyConfig = settingsStore.proxyConfig
-                    usageStore.startAutoRefresh(thresholds: themeStore.thresholds)
-                    themeStore.syncToSharedFile()
-                }
-            }
-        }
+        .environmentObject(usageStore)
+        .environmentObject(themeStore)
+        .environmentObject(settingsStore)
+        .environmentObject(updateStore)
         .windowResizability(.contentSize)
 
-        MenuBarExtra(isInserted: Bindable(settingsStore).showMenuBar) {
+        MenuBarExtra(isInserted: $showMenuBar) {
             MenuBarPopoverView()
-                .environment(usageStore)
-                .environment(themeStore)
-                .environment(settingsStore)
-                .environment(updateStore)
+                .environmentObject(usageStore)
+                .environmentObject(themeStore)
+                .environmentObject(settingsStore)
+                .environmentObject(updateStore)
         } label: {
-            MenuBarLabel(
-                usageStore: usageStore,
-                themeStore: themeStore,
-                settingsStore: settingsStore
-            )
+            MenuBarLabel()
+                .environmentObject(usageStore)
+                .environmentObject(themeStore)
+                .environmentObject(settingsStore)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
-/// Isolated view for the menu bar icon — keeps @Observable tracking
-/// scoped here so usageStore/themeStore mutations never re-evaluate
-/// the App body (which would needlessly re-evaluate the WindowGroup).
+// MARK: - Root (routes onboarding vs settings — only observes settingsStore)
+
+private struct RootView: View {
+    @EnvironmentObject private var settingsStore: SettingsStore
+
+    var body: some View {
+        if settingsStore.hasCompletedOnboarding {
+            SettingsContentView()
+        } else {
+            OnboardingView()
+        }
+    }
+}
+
+// MARK: - Settings Content (post-onboarding setup + update modal)
+
+private struct SettingsContentView: View {
+    @EnvironmentObject private var updateStore: UpdateStore
+    @EnvironmentObject private var usageStore: UsageStore
+    @EnvironmentObject private var settingsStore: SettingsStore
+    @EnvironmentObject private var themeStore: ThemeStore
+
+    var body: some View {
+        SettingsView()
+            .sheet(isPresented: $updateStore.showUpdateModal) {
+                UpdateModalView()
+            }
+            .task {
+                usageStore.proxyConfig = settingsStore.proxyConfig
+                usageStore.startAutoRefresh(thresholds: themeStore.thresholds)
+                themeStore.syncToSharedFile()
+                updateStore.startAutoCheck()
+            }
+    }
+}
+
+// MARK: - Menu Bar Label
+
 private struct MenuBarLabel: View {
-    let usageStore: UsageStore
-    let themeStore: ThemeStore
-    let settingsStore: SettingsStore
+    @EnvironmentObject private var usageStore: UsageStore
+    @EnvironmentObject private var themeStore: ThemeStore
+    @EnvironmentObject private var settingsStore: SettingsStore
 
     var body: some View {
         Image(nsImage: rendered)
@@ -81,8 +97,9 @@ private struct MenuBarLabel: View {
             pacingDisplayMode: settingsStore.pacingDisplayMode,
             hasConfig: usageStore.hasConfig,
             hasError: usageStore.hasError,
-            colorForPct: { themeStore.menuBarNSColor(for: $0) },
-            colorForZone: { themeStore.menuBarPacingNSColor(for: $0) }
+            themeColors: themeStore.current,
+            thresholds: themeStore.thresholds,
+            menuBarMonochrome: themeStore.menuBarMonochrome
         ))
     }
 }

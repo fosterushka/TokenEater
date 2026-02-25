@@ -1,6 +1,5 @@
 import SwiftUI
 import UserNotifications
-import WidgetKit
 
 enum OnboardingStep: Int, CaseIterable {
     case welcome = 0
@@ -30,12 +29,11 @@ enum NotificationStatus {
 }
 
 @MainActor
-@Observable
-final class OnboardingViewModel {
-    var currentStep: OnboardingStep = .welcome
-    var claudeCodeStatus: ClaudeCodeStatus = .checking
-    var connectionStatus: ConnectionStatus = .idle
-    var notificationStatus: NotificationStatus = .unknown
+final class OnboardingViewModel: ObservableObject {
+    @Published var currentStep: OnboardingStep = .welcome
+    @Published var claudeCodeStatus: ClaudeCodeStatus = .checking
+    @Published var connectionStatus: ConnectionStatus = .idle
+    @Published var notificationStatus: NotificationStatus = .unknown
 
     private let keychainService: KeychainServiceProtocol
     private let repository: UsageRepositoryProtocol
@@ -106,7 +104,7 @@ final class OnboardingViewModel {
     }
 
     func completeOnboarding() {
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetReloader.scheduleReload()
     }
 
     func goNext() {
