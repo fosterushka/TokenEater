@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/Claude-Pro%20%2F%20Team-D97706" alt="Claude Pro / Team">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
   <img src="https://img.shields.io/github/v/release/AThevon/TokenEater?color=F97316" alt="Release">
+  <a href="https://buymeacoffee.com/athevon"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee"></a>
 </p>
 
 ---
@@ -257,6 +258,10 @@ The shared data is stored as a JSON file in `~/Library/Application Support/com.t
 - **Sandboxed** — the app has read-write access, the widget has read-only access
 - **User-scoped** — stored in the user's Library, not system-wide
 - **Not synced** — not backed up to iCloud or shared across devices
+
+## Support
+
+If TokenEater saves you from hitting your limits blindly, consider [buying me a coffee](https://buymeacoffee.com/athevon) ☕
 
 ## License
 
