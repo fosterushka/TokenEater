@@ -18,18 +18,25 @@ extension Color {
 }
 
 extension Color {
+    private static var lighterCache: [String: Color] = [:]
+
     /// Returns a lighter version of this color by the given factor (0.0 – 1.0).
     func lighter(by amount: Double = 0.15) -> Color {
+        let key = "\(self.description)|\(amount)"
+        if let cached = Self.lighterCache[key] { return cached }
+
         let nsColor = NSColor(self)
         var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         let converted = nsColor.usingColorSpace(.sRGB) ?? nsColor
         converted.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
-        return Color(
+        let result = Color(
             hue: Double(h),
             saturation: Double(max(s - CGFloat(amount) * 0.3, 0)),
             brightness: Double(min(b + CGFloat(amount), 1.0)),
             opacity: Double(a)
         )
+        Self.lighterCache[key] = result
+        return result
     }
 }
 
@@ -49,9 +56,13 @@ extension NSColor {
 // MARK: - Date Relative Format
 
 extension Date {
-    var relativeFormatted: String {
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: self, relativeTo: Date())
+        return formatter
+    }()
+
+    var relativeFormatted: String {
+        Self.relativeFormatter.localizedString(for: self, relativeTo: Date())
     }
 }

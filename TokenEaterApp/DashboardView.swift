@@ -8,8 +8,6 @@ struct DashboardView: View {
     @State private var isVisible = false
     @State private var lastUpdateText = ""
 
-    private let updateTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
-
     var body: some View {
         ZStack {
             // Animated background
@@ -29,17 +27,20 @@ struct DashboardView: View {
         }
         .onAppear {
             isVisible = true
-            refreshLastUpdateText()
-            // Single refresh on appear — auto-refresh lifecycle is owned by StatusBarController
-            if settingsStore.hasCompletedOnboarding {
-                Task { await usageStore.refresh(thresholds: themeStore.thresholds) }
-            }
         }
         .onDisappear {
             isVisible = false
         }
-        .onReceive(updateTimer) { _ in
+        .task {
             refreshLastUpdateText()
+            // Single refresh on appear — auto-refresh lifecycle is owned by StatusBarController
+            if settingsStore.hasCompletedOnboarding {
+                await usageStore.refresh(thresholds: themeStore.thresholds)
+            }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                refreshLastUpdateText()
+            }
         }
         .onChange(of: usageStore.lastUpdate) { _, _ in
             refreshLastUpdateText()

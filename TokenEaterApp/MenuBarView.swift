@@ -9,8 +9,6 @@ struct MenuBarPopoverView: View {
 
     @State private var lastUpdateText = ""
 
-    private let updateTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
-
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -152,15 +150,16 @@ struct MenuBarPopoverView: View {
         }
         .frame(width: 300)
         .background(Color(nsColor: NSColor(red: 0.08, green: 0.08, blue: 0.09, alpha: 1)))
-        .onAppear {
+        .task {
             refreshLastUpdateText()
             // Single refresh on appear — auto-refresh lifecycle is owned by StatusBarController
             if settingsStore.hasCompletedOnboarding {
-                Task { await usageStore.refresh(thresholds: themeStore.thresholds) }
+                await usageStore.refresh(thresholds: themeStore.thresholds)
             }
-        }
-        .onReceive(updateTimer) { _ in
-            refreshLastUpdateText()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                refreshLastUpdateText()
+            }
         }
         .onChange(of: usageStore.lastUpdate) { _, _ in
             refreshLastUpdateText()

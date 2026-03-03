@@ -56,9 +56,6 @@ final class StatusBarController: NSObject {
 
     private func setupPopover() {
         popover.behavior = .transient
-    }
-
-    private func installPopoverContent() {
         let popoverView = MenuBarPopoverView()
             .environmentObject(usageStore)
             .environmentObject(themeStore)
@@ -147,11 +144,9 @@ final class StatusBarController: NSObject {
     private func togglePopover() {
         if popover.isShown {
             popover.performClose(nil)
-            popover.contentViewController = nil
             stopEventMonitor()
         } else {
             guard let button = statusItem.button else { return }
-            installPopoverContent()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             startEventMonitor()
         }
@@ -159,7 +154,6 @@ final class StatusBarController: NSObject {
 
     func showDashboard() {
         popover.performClose(nil)
-        popover.contentViewController = nil
         stopEventMonitor()
 
         if let window = dashboardWindow {
@@ -243,7 +237,6 @@ final class StatusBarController: NSObject {
     private func startEventMonitor() {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.popover.performClose(nil)
-            self?.popover.contentViewController = nil
             self?.stopEventMonitor()
         }
     }

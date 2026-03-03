@@ -59,14 +59,20 @@ final class SharedFileService: SharedFileServiceProtocol, @unchecked Sendable {
         var thresholds: UsageThresholds?
     }
 
+    private var cache: SharedData?
+
     private func load() -> SharedData {
+        if let cache { return cache }
         guard let data = try? Data(contentsOf: sharedFileURL) else {
             return SharedData()
         }
-        return (try? JSONDecoder().decode(SharedData.self, from: data)) ?? SharedData()
+        let decoded = (try? JSONDecoder().decode(SharedData.self, from: data)) ?? SharedData()
+        cache = decoded
+        return decoded
     }
 
     private func save(_ shared: SharedData) {
+        cache = shared
         let dir = sharedFileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try? JSONEncoder().encode(shared).write(to: sharedFileURL, options: .atomic)
